@@ -31,7 +31,6 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
     mark_root_window_dirty(false);
 }
 
-
 static void handle_connection(bool is_connected) {
     LOG("is_connected changed to %s", BOOL_TO_STR(is_connected));
     mark_root_window_dirty(false);  // TODO could avoid a full redraw (probably not worth it)
@@ -49,19 +48,50 @@ static void draw_quiet_time_status(const GRect bounds, GContext* ctx) {
     }
 }
 
+// Draw the static background; this only gets called once, on init
+static void draw_background(GContext* ctx, GRect bounds){
+    const Config* config = config_get();
+
+    graphics_context_set_fill_color(ctx, config->bgColor);
+    graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+
+    graphics_context_set_text_color(ctx, config->fgColor);
+
+    // hour numbers
+    {
+        const char* hours[12] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
+        GRect box = GRect(5, 20, 30, 20);
+        for (int32_t i = 0; i < 12 ; i++) {
+            box.origin.y = (i % 2 ? 20 : 43);
+            graphics_draw_text(ctx, hours[i], s_face_font, box, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+            box.origin.x += 15;
+        }
+    }
+
+    // minute numbers
+    {
+        const char* mins[12] = {"5", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55", "60"};
+        GRect box = GRect(5, 100, 30, 20);
+        for (int32_t i = 0; i < 12 ; i++) {
+            box.origin.y = ((i % 2) ? 100 : 123);
+            graphics_draw_text(ctx, mins[i], s_face_font, box, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+            box.origin.x += 15;
+        }
+    }
+}
 
 typedef struct ProgressBar {
-    uint32_t y;
-    uint32_t max;
-    uint32_t thickness;
-    uint32_t tickwidth;
+    uint32_t y;  // origin Y coordinate
+    uint32_t max;  // maximum value
+    uint32_t thickness;  // line thickness
+    uint32_t tickwidth;  // pixels per tick
 
-    uint32_t phase;  // 0 or 1
-    uint32_t current;
+    uint32_t phase;  // 0 or 1; which colour is currently increasing
+    uint32_t current; // current value
 } ProgressBar;
 
 static ProgressBar s_bar_hour = {
-    .y = 35,
+    .y = 43,
     .thickness = 3,
     .tickwidth = 15,
     .max = 12,
@@ -70,8 +100,8 @@ static ProgressBar s_bar_hour = {
 };
 
 static ProgressBar s_bar_min = {
-    .y = 60,
-    .thickness = 2,
+    .y = 123,
+    .thickness = 3,
     .tickwidth = 3,
     .max = 60,
     .phase = 0,
@@ -79,8 +109,8 @@ static ProgressBar s_bar_min = {
 };
 
 static ProgressBar s_bar_sec = {
-    .y = 76,
-    .thickness = 1,
+    .y = 145,
+    .thickness = 2,
     .tickwidth = 3,
     .max = 60,
     .phase = 0,
@@ -91,7 +121,7 @@ static ProgressBar s_bar_sec = {
 static void _drawbar(GContext* ctx, const ProgressBar* bar, uint32_t start, uint32_t end) {
     if (start != end) {
         graphics_context_set_fill_color(ctx, bar->phase ? GColorRed : GColorGreen);
-        const uint32_t zero_origin = ((PBL_DISPLAY_WIDTH - (bar->tickwidth * bar->max)) >> 1);
+        const uint32_t zero_origin = ((PBL_DISPLAY_WIDTH - (bar->tickwidth * bar->max)) >> 1) - 5;
         graphics_fill_rect(ctx,
             GRect(zero_origin + (start * bar->tickwidth), bar->y,
                   (end - start) * bar->tickwidth, bar->thickness),
@@ -99,77 +129,57 @@ static void _drawbar(GContext* ctx, const ProgressBar* bar, uint32_t start, uint
     }
 }
 
-static void bar_update(GContext* ctx, ProgressBar* bar, uint32_t value) {
+// Update a bar which increases monotonically, wrapping at its max
+static void bar_update_wrap(GContext* ctx, ProgressBar* bar, uint32_t value) {
     ASSERT(value <= bar->max);
+
     if (value < bar->current) {
         // Fill the remaining bar to the top
-        const uint32_t start = bar->current;
-        const uint32_t end = bar->max;
-        _drawbar(ctx, bar, start, end);
+        _drawbar(ctx, bar, bar->current, bar->max);
         bar->current = 0;
         bar->phase = ~bar->phase;
     }
+
     if (value > bar->current) {
-        const uint32_t start = bar->current;
-        const uint32_t end = value;
-        _drawbar(ctx, bar, start, end);
+        _drawbar(ctx, bar, bar->current, value);
     }
 
     bar->current = value;
 }
 
+// Update a bar which increases or decreases between 0 and max
+static void bar_update_nowrap(GContext* ctx, ProgressBar* bar, uint32_t value) {
+    ASSERT(value <= bar->max);
+    bar->phase = value < bar->current;
+    _drawbar(ctx, bar, bar->current, value);
+    bar->current = value;
+}
 
 static void draw_root_layer(Layer* layer, GContext* ctx) {
     PROFILE_START();
     const GRect bounds = layer_get_bounds(layer);
-    const Config* config = config_get();
+    // const Config* config = config_get();
 
     graphics_context_set_antialiased(ctx, false);
 
     if (s_is_full_redraw)
     {
-
-        // background
-        graphics_context_set_fill_color(ctx, config->bgColor);
-        graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-
-        graphics_context_set_text_color(ctx, config->fgColor);
-
-        // hour numbers
-        {
-            const char* hours[12] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
-            GRect box = GRect(10, 20, 15, 15);
-            for (int32_t i = 0; i < 12 ; i++) {  // TODO 24h mode
-                graphics_draw_text(ctx, hours[i], s_face_font, box, GTextOverflowModeWordWrap, GTextAlignmentRight, NULL);
-                box.origin.x += 15;
-            }
-        }
-
-        // minute numbers
-        {
-            const char* mins[12] = {"5", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55", "60"};
-            GRect box = GRect(10, 60, 15, 15);
-            for (int32_t i = 0; i < 12 ; i++) {  // TODO 24h mode
-                graphics_draw_text(ctx, mins[i], s_face_font, box, GTextOverflowModeWordWrap, GTextAlignmentRight, NULL);
-                box.origin.x += 15;
-            }
-        }
+        draw_background(ctx, bounds);
+        s_is_full_redraw = false;
     }
 
-    bar_update(ctx, &s_bar_hour, s_current_time.tm_hour % 12);
-    bar_update(ctx, &s_bar_min, s_current_time.tm_min);
-    bar_update(ctx, &s_bar_sec, s_current_time.tm_sec);
+    bar_update_wrap(ctx, &s_bar_hour, s_current_time.tm_hour % 12);
+    bar_update_wrap(ctx, &s_bar_min, s_current_time.tm_min);
+    bar_update_wrap(ctx, &s_bar_sec, s_current_time.tm_sec);
 
     draw_disconnect_status(bounds, ctx);
     draw_quiet_time_status(bounds, ctx);
-
-    s_is_full_redraw = false;
 
     PROFILE_END("draw_root_layer");
 }
 
 static void init_resources(Layer *root_layer) {
-    s_face_font = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+    s_face_font = fonts_get_system_font(FONT_KEY_LECO_20_BOLD_NUMBERS);
 }
 
 static void destroy_resources(void) {
