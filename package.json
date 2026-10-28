@@ -1,0 +1,28 @@
+{
+  "name": "Ultimate Battery Saver",
+  "author": "howeaj",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {
+    "@rebble/clay": "^1.0.8"
+  },
+  "pebble": {
+    "displayName": "Ultimate Battery Saver",
+    "uuid": "32f4a77b-685a-4038-864e-21e1f2e6e44d",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery"
+    ],
+    "watchapp": { "watchface": true },
+    "messageKeys": [
+        "enableSeconds",
+        "bgColor",
+        "fgColor",
+        "hourColor",
+        "minuteColor",
+        "secondColor"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+Lowest possible battery usage. Maximum readability and features.
+
+By default, watchfaces redraw the whole screen for every update, even if only a small section has changed.
+This one is different; by avoiding PebbleOS' usual layering API, it updates only the pixels that need to.
+On top of that, it is designed to minimise the number of pixels (and display rows) that need updating.
+
+The result is one of the most power-efficient watchfaces possible to implement,
+while retaining all useful features!
+
+Configurable features:
+    - Battery meter
+    - Alarm indicator
+    - Status icons:
+        - Bluetooth disconnection
+        - Quiet time
+    - Complications:
+        - Battery %
+        - Day name or number
+        - Month name or number
+        - Steps (count or distance)
+        - Sleep (all or restful)
+        - Alternate Timezone
+    - Colours fully customisable (preset and custom themes)

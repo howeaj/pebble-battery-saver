@@ -1,0 +1,4 @@
+[
+  { "type": "heading", "defaultValue": "Ultimate Battery Saver config" },
+  { "type": "submit", "defaultValue": "Save" }
+]
