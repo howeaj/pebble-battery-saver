@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Andrew Howe. All rights reserved. See LICENSE (GPLv3.0).
 
 /* TODO
-
+    Estimate battery remaining
 */
 
 #include <pebble.h>
@@ -61,6 +61,7 @@ typedef struct ProgressBar {
     uint32_t tickwidth;  // pixels per tick
     uint32_t thickness;  // line thickness
     bool extend; // Extend the bar beyond the last value, to mirror the first value
+    bool alternate_labels; // Labels alternate above & below the bar
 
     uint32_t phase;  // 0 or 1; which colour is currently increasing
     uint32_t current; // current value
@@ -115,7 +116,7 @@ typedef struct ProgressBar {
 #define HOURMIN_MARGIN (10)  // Space between the hour and minute groups
 
 // Bar y-offsets
-#define SEC_BAR_Y_ORIGIN (UNOBSTRUCTED_HEIGHT - PEEK_MARGIN - SEC_THICKNESS)
+#define SEC_BAR_Y_ORIGIN (UNOBSTRUCTED_HEIGHT - PEEK_MARGIN - SEC_THICKNESS + PBL_DISPLAY_WIDTH_SWITCH(0, 0, -2))
 #define MIN_BAR_Y_ORIGIN (SEC_BAR_Y_ORIGIN - BAR_LABEL_MARGIN \
                           - LABEL_FONT_HEIGHT - BAR_LABEL_MARGIN - MIN_THICKNESS)
 #define HOUR_BAR_Y_ORIGIN (MIN_BAR_Y_ORIGIN - BAR_LABEL_MARGIN - LABEL_FONT_HEIGHT \
@@ -130,6 +131,7 @@ static ProgressBar s_bar_hour = {
     .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(10, 14, 18),
     .thickness = HOUR_THICKNESS,
     .extend = true,
+    .alternate_labels = true,
     .phase = 0,
     .current = 0
 };
@@ -141,6 +143,7 @@ static ProgressBar s_bar_min = {
     .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
     .thickness = MIN_THICKNESS,
     .extend = false,
+    .alternate_labels = false,
     .phase = 0,
     .current = 0
 };
@@ -152,6 +155,7 @@ static ProgressBar s_bar_sec = {
     .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
     .thickness = SEC_THICKNESS,
     .extend = false,
+    .alternate_labels = false,
     .phase = 0,
     .current = 0
 };
@@ -162,16 +166,41 @@ static int16_t bar_x_origin(const ProgressBar* bar) {
     return ((PBL_DISPLAY_WIDTH - bar_width) >> 1) + bar->x_nudge;
 }
 
-static void draw_labels_around_bar(GContext* ctx, GRect bounds, const ProgressBar* bar, const char* title, const char** labels, size_t len) {
+static void draw_bar_tickmarks(GContext* ctx, const ProgressBar* bar, bool above) {
+    graphics_context_set_fill_color(ctx, config_get()->fgColor);
+
+    const int16_t zero_x_origin = bar_x_origin(bar);
+    const int16_t above_y = bar->y - BAR_BORDER;
+    const int16_t below_y = bar->y + bar->thickness + BAR_BORDER;
+
+    for (uint32_t i = 0; i < bar->max; i++) {
+        bool is_above = (i >= PBL_DISPLAY_WIDTH_SWITCH(7, 5, 5));
+        if (!above) {
+            is_above = !is_above;
+        }
+        graphics_fill_rect(ctx,
+            GRect(
+                zero_x_origin + ((i + 1) * bar->tickwidth) - 1,
+                is_above ? above_y : below_y,
+                1,
+                (((i + 1) % 5) ? 1 : 3) * (is_above ? -1 : 1)
+            ), 0, GCornerNone
+        );
+    }
+}
+
+static void draw_bar_labels(GContext* ctx, GRect bounds, const ProgressBar* bar, const char* title, const char** labels, size_t len) {
     // indices
     const int16_t label_spacing = (bar->tickwidth * bar->max) / len;
     const int16_t zero_x_origin = bar_x_origin(bar);
     const int16_t box_w = LABEL_FONT_WIDTH * 3;
-    GRect box = GRect(zero_x_origin + label_spacing - (box_w / 2), 0, box_w, LABEL_FONT_HEIGHT);
-    const int16_t above_y = bar->y - (LABEL_FONT_HEIGHT + BAR_LABEL_MARGIN);
-    const int16_t below_y = bar->y + bar->thickness + BAR_LABEL_MARGIN;
+    const int16_t above_y = bar->y - (LABEL_FONT_HEIGHT + BAR_LABEL_MARGIN) - LABEL_FONT_Y_PAD;
+    const int16_t below_y = bar->y + bar->thickness + BAR_LABEL_MARGIN - LABEL_FONT_Y_PAD;
+    GRect box = GRect(zero_x_origin + label_spacing - (box_w / 2), below_y, box_w, LABEL_FONT_HEIGHT);
     for (size_t i = 0; i < len ; i++) {
-        box.origin.y = ((i % 2) ? above_y : below_y) - LABEL_FONT_Y_PAD;
+        if (bar->alternate_labels) {
+            box.origin.y = (i % 2) ? above_y : below_y;
+        }
         graphics_draw_text(ctx, labels[i], s_bar_label_font, box, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
         box.origin.x += label_spacing;
     }
@@ -248,14 +277,14 @@ static void draw_background(GContext* ctx, GRect bounds) {
 
     #define TEN_HOUR_LABEL PBL_DISPLAY_SMALL_IF_ELSE("0", "10") // TODO Ideally an X character instead of 0
     static const char* hours[12] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", TEN_HOUR_LABEL, "11", "12"};
-    draw_labels_around_bar(ctx, bounds, &s_bar_hour, PBL_DISPLAY_SMALL_IF_ELSE("HR", "HOUR"), hours, ARRAY_LEN(hours));
+    draw_bar_labels(ctx, bounds, &s_bar_hour, PBL_DISPLAY_SMALL_IF_ELSE("HR", "HOUR"), hours, ARRAY_LEN(hours));
 
     #if PBL_DISPLAY_SMALL
-        static const char* mins[6] = {"10", "20", "30", "40", "50", "60"};
+        static const char* mins[6] = {"1", "2", "3", "4", "5", "6"};  // TODO append small "o"s
     #else // !PBL_DISPLAY_SMALL
-        static const char* mins[12] = {"5", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55", "60"};
+        static const char* mins[6] = {"10", "20", "30", "40", "50", "60"};
     #endif // !PBL_DISPLAY_SMALL
-    draw_labels_around_bar(ctx, bounds, &s_bar_min, "MIN", mins, ARRAY_LEN(mins));
+    draw_bar_labels(ctx, bounds, &s_bar_min, "MIN", mins, ARRAY_LEN(mins));
 
     // sec label
     const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-1, -3, 2);
@@ -268,6 +297,9 @@ static void draw_background(GContext* ctx, GRect bounds) {
     _draw_bar_outline(ctx, &s_bar_min);
     _draw_bar_outline(ctx, &s_bar_sec);
 #endif // BAR_OUTLINES
+
+    draw_bar_tickmarks(ctx, &s_bar_min, true);
+    draw_bar_tickmarks(ctx, &s_bar_sec, false);
 
     bar_update_wrap(ctx, &s_bar_hour, s_bar_hour.max + 1);
     bar_update_wrap(ctx, &s_bar_min, s_bar_min.max);
