@@ -7,7 +7,7 @@
 #include <pebble.h>
 
 #define DEBUG 1
-#define PROFILE 1
+#define PROFILE 0
 #define DEMO 0
 #define FAST_TIME_MS 0  // millisecond per minute, or 0 to disable
 #define FORCE_BACKLIGHT_ON (DEMO || DEBUG || 0)

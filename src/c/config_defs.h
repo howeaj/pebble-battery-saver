@@ -30,8 +30,8 @@
 #define X_CONFIG_OPTIONS(MACRO) \
     /* conftype, C type, arrsuffix,      message key,         default */ \
     MACRO(BOOL,  bool,,                  enableSeconds,       true) \
-    MACRO(COLOR, GColor,,                bgColor,             GColorWhite) \
-    MACRO(COLOR, GColor,,                fgColor,             GColorBlack) \
+    MACRO(COLOR, GColor,,                bgColor,             GColorBlack) \
+    MACRO(COLOR, GColor,,                fgColor,             GColorLightGray) \
     MACRO(COLOR, GColor,,                hourColor,           GColorBlack) \
     MACRO(COLOR, GColor,,                minuteColor,         GColorBlack) \
     MACRO(COLOR, GColor,,                secondColor,         GColorBlack) \
