@@ -56,9 +56,11 @@ static void draw_quiet_time_status(const GRect bounds, GContext* ctx) {
 
 typedef struct ProgressBar {
     uint32_t y;  // origin Y coordinate
+    uint32_t x_nudge;  // nudge from centred
     uint32_t max;  // maximum value
     uint32_t tickwidth;  // pixels per tick
     uint32_t thickness;  // line thickness
+    bool extend; // Extend the bar beyond the last value, to mirror the first value
 
     uint32_t phase;  // 0 or 1; which colour is currently increasing
     uint32_t current; // current value
@@ -96,9 +98,16 @@ typedef struct ProgressBar {
 #define LABEL_FONT_HEIGHT (14)  // pixel height of chars
 #define LABEL_FONT_WIDTH (10)  // pixel width of one char
 
+#define BAR_OUTLINES (true)
+#if BAR_OUTLINES
+    #define PBL_BAR_OUTLINE_IF_ELSE(with, without) (with)
+#else
+    #define PBL_BAR_OUTLINE_IF_ELSE(with, without) (without)
+#endif
+
 // Vertical spacing
-#define BAR_BORDER PBL_DISPLAY_SMALL_IF_ELSE(2, 0)
-#define BAR_LABEL_MARGIN PBL_DISPLAY_SMALL_IF_ELSE(BAR_BORDER + 1, 2)
+#define BAR_BORDER PBL_BAR_OUTLINE_IF_ELSE(2, 0)
+#define BAR_LABEL_MARGIN PBL_BAR_OUTLINE_IF_ELSE(BAR_BORDER + 1, 2)
 #define HOUR_THICKNESS (3)
 #define MIN_THICKNESS (3)
 #define SEC_THICKNESS (2)
@@ -113,37 +122,44 @@ typedef struct ProgressBar {
                            - HOURMIN_MARGIN \
                            - LABEL_FONT_HEIGHT - BAR_LABEL_MARGIN - HOUR_THICKNESS)
 
+
 static ProgressBar s_bar_hour = {
     .y = HOUR_BAR_Y_ORIGIN,
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, -3, 0),
     .max = 12,
-    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(10, 15, 18),
+    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(10, 14, 18),
     .thickness = HOUR_THICKNESS,
+    .extend = true,
     .phase = 0,
     .current = 0
 };
 
 static ProgressBar s_bar_min = {
     .y = MIN_BAR_Y_ORIGIN,
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 1, 2),
     .max = 60,
     .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
     .thickness = MIN_THICKNESS,
+    .extend = false,
     .phase = 0,
     .current = 0
 };
 
 static ProgressBar s_bar_sec = {
     .y = SEC_BAR_Y_ORIGIN,
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 1, 2),
     .max = 60,
     .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
     .thickness = SEC_THICKNESS,
+    .extend = false,
     .phase = 0,
     .current = 0
 };
 
 // Where the x-origin should be for the bar, including the label overhang, to be centred
 static int16_t bar_x_origin(const ProgressBar* bar) {
-    const int16_t bar_width = (bar->tickwidth * bar->max);
-    return ((PBL_DISPLAY_WIDTH - bar_width - LABEL_FONT_WIDTH) >> 1);
+    const int16_t bar_width = (bar->tickwidth * bar->max) + (bar->extend ? bar->tickwidth : LABEL_FONT_WIDTH);
+    return ((PBL_DISPLAY_WIDTH - bar_width) >> 1) + bar->x_nudge;
 }
 
 static void draw_labels_around_bar(GContext* ctx, GRect bounds, const ProgressBar* bar, const char* title, const char** labels, size_t len) {
@@ -161,7 +177,7 @@ static void draw_labels_around_bar(GContext* ctx, GRect bounds, const ProgressBa
     }
 
     // title
-    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-4, -2, 0);
+    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-2, -4, 0);
     graphics_draw_text(ctx, title, s_bar_title_font,
         GRect(zero_x_origin + title_x_offset, bar->y - 9 - BAR_LABEL_MARGIN, 30, 10),
         GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -176,12 +192,12 @@ static inline GRect _bar_rect(const ProgressBar* bar, uint32_t start, uint32_t e
     );
 }
 
-#if PBL_BW
+#if BAR_OUTLINES
 static void _draw_bar_outline(GContext* ctx, const ProgressBar* bar) {
     graphics_context_set_fill_color(ctx, config_get()->fgColor);
-    graphics_fill_rect(ctx, grect_crop(_bar_rect(bar, 0, bar->max), -2), 0, GCornerNone);
+    graphics_fill_rect(ctx, grect_crop(_bar_rect(bar, 0, bar->max + (bar->extend ? 1 : 0)), -2), 0, GCornerNone);
 }
-#endif // PBL_BW
+#endif // BAR_OUTLINES
 
 // Draw `bar` between its `start` and `end` value
 static void _drawbar(GContext* ctx, const ProgressBar* bar, uint32_t start, uint32_t end) {
@@ -195,9 +211,13 @@ static void _drawbar(GContext* ctx, const ProgressBar* bar, uint32_t start, uint
 static void bar_update_wrap(GContext* ctx, ProgressBar* bar, uint32_t value) {
     ASSERT(value <= bar->max);
 
+    if (bar->extend && (value == 0)) {  // TODO do this differently?
+        value = bar->max;
+    }
+
     if (value < bar->current) {
         // Fill the remaining bar to the top
-        _drawbar(ctx, bar, bar->current, bar->max);
+        _drawbar(ctx, bar, bar->current, bar->max + (bar->extend ? 1 : 0));
         bar->current = 0;
         bar->phase = ~bar->phase;
     }
@@ -216,8 +236,6 @@ void bar_update_nowrap(GContext* ctx, ProgressBar* bar, uint32_t value) {
     _drawbar(ctx, bar, bar->current, value);
     bar->current = value;
 }
-
-
 
 // Draw the static background; this only gets called once, on init
 static void draw_background(GContext* ctx, GRect bounds) {
@@ -240,18 +258,18 @@ static void draw_background(GContext* ctx, GRect bounds) {
     draw_labels_around_bar(ctx, bounds, &s_bar_min, "MIN", mins, ARRAY_LEN(mins));
 
     // sec label
-    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-3, -1, 2);
+    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-1, -3, 2);
     graphics_draw_text(ctx, "SEC", s_bar_title_font,
         GRect(bar_x_origin(&s_bar_sec) + title_x_offset, s_bar_sec.y + s_bar_sec.thickness + BAR_LABEL_MARGIN - 3, 30, 10),
         GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
 
-#if PBL_BW
+#if BAR_OUTLINES
     _draw_bar_outline(ctx, &s_bar_hour);
     _draw_bar_outline(ctx, &s_bar_min);
     _draw_bar_outline(ctx, &s_bar_sec);
-#endif // PBL_BW
+#endif // BAR_OUTLINES
 
-    bar_update_wrap(ctx, &s_bar_hour, s_bar_hour.max);
+    bar_update_wrap(ctx, &s_bar_hour, s_bar_hour.max + 1);
     bar_update_wrap(ctx, &s_bar_min, s_bar_min.max);
     bar_update_wrap(ctx, &s_bar_sec, s_bar_sec.max);
 }
