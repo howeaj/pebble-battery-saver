@@ -26,12 +26,14 @@ static Config s_config = {
 };
 #undef CONFIG_STRUCT_DEFAULT
 
-static NewConfigCallback s_new_config_callback = NULL;
 
 
 /******************************************************************************
  Private methods; Local watch persistence
 ******************************************************************************/
+#if CONFIGURABLE
+
+static NewConfigCallback s_new_config_callback = NULL;
 
 static bool is_local_persist_written_and_current_version(void) {
     return persist_read_int(PERSIST_KEY_CONFIG_VERSION) == PERSIST_CONFIG_VERSION;
@@ -136,6 +138,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 }
 
 
+#endif // CONFIGURABLE
 /******************************************************************************
  Public methods
 ******************************************************************************/
@@ -143,6 +146,7 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
 // `callback` is an optional function to call whenever a new config is received from the phone;
 // it should be used to mark affected layers dirty or otherwise live-update config changes
 void config_init(NewConfigCallback callback) {
+#if CONFIGURABLE
     s_new_config_callback = callback;
     local_persist_load();
     app_message_register_inbox_received(&inbox_received_handler);
@@ -151,10 +155,13 @@ void config_init(NewConfigCallback callback) {
     if (result != APP_MSG_OK) {
         LOG("app_message_open failed: 0x%x", result);
     }
+#endif // CONFIGURABLE
 }
 
 void config_deinit(void) {
+#if CONFIGURABLE
     app_message_deregister_callbacks();
+#endif // CONFIGURABLE
 }
 
 const Config* config_get(void) {

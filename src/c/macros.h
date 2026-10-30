@@ -44,7 +44,7 @@
     #define PROFILE_START() const uint32_t _PROFILE_start_ms = timestamp_ms()
     #define PROFILE_END(name) MACRO_START \
         const uint32_t _PROFILE_end_ms = timestamp_ms(); \
-        LOG(name": %ums", _PROFILE_end_ms - _PROFILE_start_ms); \
+        APP_LOG(APP_LOG_LEVEL_INFO, name": %ums", _PROFILE_end_ms - _PROFILE_start_ms); \
         MACRO_END
 #else // !PROFILE
     #define PROFILE_START()

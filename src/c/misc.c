@@ -4,6 +4,7 @@
 
 #include <pebble.h>
 
+#if CONFIGURABLE
 
 // in-place string to upper case
 void string_to_upper(char* str, size_t n) {
@@ -39,3 +40,5 @@ ssize_t strscpy(char * restrict dst, const char * restrict src, size_t size) {
         return -1;
     }
 }
+
+#endif // CONFIGURABLE

@@ -6,10 +6,14 @@
 
 #include <pebble.h>
 
-#define DEBUG 1
+// Whether we're the base unconfigurable BatSave, or configurable BatSave+
+#define CONFIGURABLE 0
+
+#define DEBUG 0
 #define PROFILE 0
 #define DEMO 0
-#define FAST_TIME_MS 0  // millisecond per minute, or 0 to disable
+#define SECS_PER_FAST_TIME_TICK (60 * 3)  // 5 for aplite/chalk, 3 for gabbro, 3.75 for emery
+#define FAST_TIME_MS 0  // millisecond per fast time tick, or 0 to disable
 #define FORCE_BACKLIGHT_ON (DEMO || DEBUG || 0)
 #define FORCE_BLUETOOTH_DISCONNECT (DEBUG || 0)  // because emu-bt-connection takes forever
 #define FORCE_QUIET_TIME (DEBUG || 0)
