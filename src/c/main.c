@@ -28,6 +28,7 @@ void mark_root_window_dirty(bool full_redraw);
 static GFont s_bar_label_font;
 static GFont s_bar_title_font;
 static GBitmap* s_twelve;
+static GBitmap* s_bat;
 static bool s_is_full_redraw = false;
 
 struct tm s_current_time;
@@ -391,8 +392,14 @@ static void draw_bg_sec(GContext* ctx) {
 static void draw_background(GContext* ctx, const GRect bounds) {
     const Config* config = config_get();
 
+    // bg fill
     graphics_context_set_fill_color(ctx, config->bgColor);
     graphics_fill_rect(ctx, bounds, 0, GCornerNone);
+
+    // bat picture
+    GRect bat_bounds = gbitmap_get_bounds(s_bat);
+    bat_bounds.origin = GPoint((PBL_DISPLAY_WIDTH - bat_bounds.size.w) / 2, PBL_DISPLAY_HEIGHT - bat_bounds.size.h);
+    graphics_draw_bitmap_in_rect(ctx, s_bat, bat_bounds);
 
     graphics_context_set_text_color(ctx, config->fgColor);
 
@@ -448,10 +455,12 @@ static void init_resources(Layer *root_layer) {
     s_bar_label_font = fonts_get_system_font(LABEL_FONT);
     s_bar_title_font = fonts_get_system_font(FONT_KEY_GOTHIC_09);
     s_twelve = gbitmap_create_with_resource(RESOURCE_ID_TWELVE);
+    s_bat = gbitmap_create_with_resource(RESOURCE_ID_BAT);
 }
 
 static void destroy_resources(void) {
     gbitmap_destroy(s_twelve);
+    gbitmap_destroy(s_bat);
 }
 
 static void handle_config(const Config* config) {

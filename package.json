@@ -32,7 +32,8 @@
     "resources": {
       "media": [
         {"type": "bitmap", "file": "app_icon.png", "name": "APP_ICON", "menuIcon": true},
-        {"type": "bitmap", "file": "twelve.png", "name": "TWELVE"}
+        {"type": "bitmap", "file": "twelve.png", "name": "TWELVE"},
+        {"type": "bitmap", "file": "bat.png", "name": "BAT"}
       ]
     }
   }
