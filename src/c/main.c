@@ -73,13 +73,16 @@ typedef struct ProgressBar {
 
 #define PBL_DISPLAY_SMALL (PBL_DISPLAY_WIDTH == 144)
 #if PBL_DISPLAY_WIDTH == 144
-    #define PBL_DISPLAY_WIDTH_SWITCH(classic, emery, gabbro) (classic)
+    #define PBL_DISPLAY_WIDTH_SWITCH(classic, chalk, emery, gabbro) (classic)
+    #define PBL_DISPLAY_SMALL_IF_ELSE(small, wide) (small)
+#elif PBL_DISPLAY_WIDTH == 180
+    #define PBL_DISPLAY_WIDTH_SWITCH(classic, chalk, emery, gabbro) (chalk)
     #define PBL_DISPLAY_SMALL_IF_ELSE(small, wide) (small)
 #elif PBL_DISPLAY_WIDTH == 200
-    #define PBL_DISPLAY_WIDTH_SWITCH(classic, emery, gabbro) (emery)
+    #define PBL_DISPLAY_WIDTH_SWITCH(classic, chalk, emery, gabbro) (emery)
     #define PBL_DISPLAY_SMALL_IF_ELSE(small, wide) (wide)
 #elif PBL_DISPLAY_WIDTH == 260
-    #define PBL_DISPLAY_WIDTH_SWITCH(classic, emery, gabbro) (gabbro)
+    #define PBL_DISPLAY_WIDTH_SWITCH(classic, chalk, emery, gabbro) (gabbro)
     #define PBL_DISPLAY_SMALL_IF_ELSE(small, wide) (wide)
 #else
     #error "Unsupported PBL_DISPLAY_WIDTH"
@@ -131,7 +134,7 @@ typedef struct ProgressBar {
 #define HOURMIN_MARGIN (10)  // Space between the hour and minute groups
 
 // Bar y-offsets
-#define SEC_BAR_Y_ORIGIN (UNOBSTRUCTED_HEIGHT - PEEK_MARGIN - SEC_THICKNESS + PBL_DISPLAY_WIDTH_SWITCH(0, 0, -2))
+#define SEC_BAR_Y_ORIGIN (UNOBSTRUCTED_HEIGHT - PEEK_MARGIN - SEC_THICKNESS + PBL_DISPLAY_WIDTH_SWITCH(0, 0, 0, -2))
 #define MIN_BAR_Y_ORIGIN (SEC_BAR_Y_ORIGIN - BAR_LABEL_MARGIN \
                           - LABEL_FONT_HEIGHT - BAR_LABEL_MARGIN - MIN_THICKNESS)
 #define HOUR_BAR_Y_ORIGIN (MIN_BAR_Y_ORIGIN - BAR_LABEL_MARGIN - LABEL_FONT_HEIGHT \
@@ -140,9 +143,9 @@ typedef struct ProgressBar {
 
 
 static ProgressBar s_bar_hour_only = {
-    .y = PBL_DISPLAY_HEIGHT / 2,
-    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, -LABEL_FONT_WIDTH/2 + 1),
-    .max = PBL_DISPLAY_WIDTH_SWITCH(12 * 12, 12 * 16, 12 * 20),
+    .y = (PBL_DISPLAY_HEIGHT / 2) + PBL_DISPLAY_WIDTH_SWITCH(-10, -10, 0, 0),
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, 0, -LABEL_FONT_WIDTH/2 + 1),
+    .max = PBL_DISPLAY_WIDTH_SWITCH(12 * 12, 12 * 12, 12 * 16, 12 * 20),
     .tickwidth = 1,
     .thickness = 2,
     .extend = false,
@@ -153,9 +156,9 @@ static ProgressBar s_bar_hour_only = {
 
 static ProgressBar s_bar_hour = {
     .y = HOUR_BAR_Y_ORIGIN,
-    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, -3, 0),
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, -3, 0),
     .max = 12,
-    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(10, 14, 18),
+    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(10, 12, 14, 18),
     .thickness = HOUR_THICKNESS,
     .extend = true,
     .alternate_labels = true,
@@ -165,9 +168,9 @@ static ProgressBar s_bar_hour = {
 
 static ProgressBar s_bar_min = {
     .y = MIN_BAR_Y_ORIGIN,
-    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 1, 2),
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, 1, 2),
     .max = 60,
-    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
+    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 2, 3, 4),
     .thickness = MIN_THICKNESS,
     .extend = false,
     .alternate_labels = false,
@@ -177,9 +180,9 @@ static ProgressBar s_bar_min = {
 
 static ProgressBar s_bar_sec = {
     .y = SEC_BAR_Y_ORIGIN,
-    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 1, 2),
+    .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, 1, 2),
     .max = 60,
-    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 3, 4),
+    .tickwidth = PBL_DISPLAY_WIDTH_SWITCH(2, 2, 3, 4),
     .thickness = SEC_THICKNESS,
     .extend = false,
     .alternate_labels = false,
@@ -201,7 +204,7 @@ static void draw_bar_tickmarks(GContext* ctx, const ProgressBar* bar, bool above
     const int16_t below_y = bar->y + bar->thickness + BAR_BORDER;
 
     for (uint32_t i = 0; i < bar->max; i++) {
-        bool is_above = (i >= PBL_DISPLAY_WIDTH_SWITCH(7, 5, 5));
+        bool is_above = (i >= PBL_DISPLAY_WIDTH_SWITCH(7, 6, 5, 5));
         if (!above) {
             is_above = !is_above;
         }
@@ -233,7 +236,7 @@ static void draw_bar_labels(GContext* ctx, const ProgressBar* bar, const char* t
     }
 
     // title
-    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-2, -4, 0);
+    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-2, -3, -4, 0);
     graphics_draw_text(ctx, title, s_bar_title_font,
         GRect(zero_x_origin + title_x_offset, bar->y - 9 - BAR_LABEL_MARGIN, 30, 10),
         GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -297,7 +300,7 @@ static void draw_bg_hour_only(GContext* ctx) {
     ProgressBar* const bar = &s_bar_hour_only;
     const int16_t zero_x_origin = bar_x_origin(&s_bar_hour_only);
 
-    #define TWELVE_HOUR_LABEL PBL_DISPLAY_WIDTH_SWITCH("", "", "12")
+    #define TWELVE_HOUR_LABEL PBL_DISPLAY_WIDTH_SWITCH("", "", "", "12")
     static const char* hours[12] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", TWELVE_HOUR_LABEL};
     draw_bar_labels(ctx, &s_bar_hour_only, "", hours, ARRAY_LEN(hours));
 
@@ -308,7 +311,7 @@ static void draw_bg_hour_only(GContext* ctx) {
     const int16_t bar_end = zero_x_origin + (bar->max * bar->tickwidth);
     const int16_t x_org = ((bar_end + w_12/2) > PBL_DISPLAY_WIDTH) ? (PBL_DISPLAY_WIDTH - w_12) : (bar_end - w_12/2);
     graphics_draw_bitmap_in_rect(ctx, s_twelve, GRect(x_org, s_bar_hour_only.y - (h_12 + BAR_LABEL_MARGIN), 4, h_12));
-#endif
+#endif //!PBL_PLATFORM_GABBRO
 
     // tickmarks
     graphics_context_set_fill_color(ctx, PBL_IF_COLOR_ELSE(GColorDarkGray, GColorWhite));
@@ -374,7 +377,7 @@ static void draw_bg_min(GContext* ctx) {
 
 static void draw_bg_sec(GContext* ctx) {
     // sec label
-    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-1, -3, 2);
+    const int16_t title_x_offset = PBL_DISPLAY_WIDTH_SWITCH(-1, -2, -3, 2);
     graphics_draw_text(ctx, "SEC", s_bar_title_font,
         GRect(bar_x_origin(&s_bar_sec) + title_x_offset, s_bar_sec.y + s_bar_sec.thickness + BAR_LABEL_MARGIN - 3, 30, 10),
         GTextOverflowModeWordWrap, GTextAlignmentLeft, NULL);
@@ -398,7 +401,8 @@ static void draw_background(GContext* ctx, const GRect bounds) {
 
     // bat picture
     GRect bat_bounds = gbitmap_get_bounds(s_bat);
-    bat_bounds.origin = GPoint((PBL_DISPLAY_WIDTH - bat_bounds.size.w) / 2, PBL_DISPLAY_HEIGHT - bat_bounds.size.h);
+    const int16_t y_offset = PBL_DISPLAY_WIDTH_SWITCH(0, 7, 15, 20);
+    bat_bounds.origin = GPoint((PBL_DISPLAY_WIDTH - bat_bounds.size.w) / 2, PBL_DISPLAY_HEIGHT - bat_bounds.size.h - y_offset);
     graphics_draw_bitmap_in_rect(ctx, s_bat, bat_bounds);
 
     graphics_context_set_text_color(ctx, config->fgColor);
