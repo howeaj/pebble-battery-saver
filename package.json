@@ -1,14 +1,11 @@
 {
-  "name": "Ultimate Battery Saver",
+  "name": "BatSave",
   "author": "howeaj",
   "version": "1.0.0",
   "keywords": ["pebble-app"],
   "private": true,
-  "dependencies": {
-    "@rebble/clay": "^1.0.8"
-  },
   "pebble": {
-    "displayName": "Ultimate Battery Saver",
+    "displayName": "BatSave",
     "uuid": "32f4a77b-685a-4038-864e-21e1f2e6e44d",
     "sdkVersion": "3",
     "enableMultiJS": true,
@@ -32,7 +29,22 @@
     ],
     "resources": {
       "media": [
-        {"type": "bitmap", "file": "app_icon.png", "name": "APP_ICON", "menuIcon": true},
+        { "file": "app_icon.png", "type": "bitmap", "name": "APP_ICON",
+          "memoryFormat": "1Bit", "menuIcon": true,
+          "targetPlatforms": [
+            "aplite",
+            "diorite",
+            "flint"
+          ]
+        },
+        { "file": "app_icon.png", "type": "bitmap", "name": "APP_ICON",
+          "targetPlatforms": [
+            "basalt",
+            "chalk",
+            "emery",
+            "gabbro"
+          ]
+        },
         {"type": "bitmap", "file": "twelve.png", "name": "TWELVE"},
         {"type": "bitmap", "file": "bat.png", "name": "BAT"}
       ]

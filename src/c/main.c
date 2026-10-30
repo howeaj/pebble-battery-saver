@@ -401,7 +401,7 @@ static void draw_background(GContext* ctx, const GRect bounds) {
 
     // bat picture
     GRect bat_bounds = gbitmap_get_bounds(s_bat);
-    const int16_t y_offset = PBL_DISPLAY_WIDTH_SWITCH(0, 7, 15, 20);
+    const int16_t y_offset = PBL_DISPLAY_WIDTH_SWITCH(2, 7, 15, 20);
     bat_bounds.origin = GPoint((PBL_DISPLAY_WIDTH - bat_bounds.size.w) / 2, PBL_DISPLAY_HEIGHT - bat_bounds.size.h - y_offset);
     graphics_draw_bitmap_in_rect(ctx, s_bat, bat_bounds);
 
