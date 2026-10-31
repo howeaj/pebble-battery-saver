@@ -1,0 +1,15 @@
+Ultimate battery saving watchface; updates just two pixels per ~3-5 minutes.
+
+Tags: save, power, efficient, low, bar, long, life, linear, horizontal, simple, clean, dark, black
+
+By default, watchfaces built for PebbleOS redraw the entire screen and send the whole thing to the display for every update even if only a small section has changed (that's just how the Layers API normally works).
+This one carefully updates only the pixels that need to, so that only those rows are actually sent to the display.
+Finally, it is designed to minimise the pixels/rows changed while still showing hours and minutes legibly.
+
+The result is (nearly) the most power-efficient watchface possible to implement while still updating live with minutes!
+
+Coming soon: configurable readability&features vs power use (config deliberately excluded here for bare minimum battery usage).
+
+Feedback welcome!
+
+P.S. for Halloween there's a spooky bat because why not, it's in the name after all ¯\_(ツ)_/¯
