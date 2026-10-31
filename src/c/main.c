@@ -1,7 +1,15 @@
 // Copyright (c) 2026 Andrew Howe. All rights reserved. See LICENSE (GPLv3.0).
 
 /* TODO
-    Estimate battery remaining
+
+    Clean up this horrific mess!
+
+    Config options
+    Complications
+        Estimate time until 0% battery
+            Maybe Muninn could share this via widget
+        Bluetooth, Quiet Time, Date, etc etc etc
+    Draw straight into the framebuffer instead of via grect
 */
 
 #include <pebble.h>
@@ -60,7 +68,7 @@ typedef struct ProgressBar {
     uint32_t y;  // origin Y coordinate
     uint32_t x_nudge;  // nudge from centred
     uint32_t max;  // maximum value
-    uint32_t w;  // maximum value
+    uint32_t w;  // pixel width
     uint32_t thickness;  // line thickness
     bool extend; // Extend the bar beyond the last value, to mirror the first value
     bool alternate_labels; // Labels alternate above & below the bar
@@ -153,7 +161,7 @@ typedef struct ProgressBar {
 static ProgressBar s_bar_hour_only = {
     .y = (PBL_DISPLAY_HEIGHT / 2) + PBL_DISPLAY_WIDTH_SWITCH(NUDGE_FOR_BAT, NUDGE_FOR_BAT, 0, 0),
     .x_nudge = PBL_DISPLAY_WIDTH_SWITCH(0, 0, 0, -LABEL_FONT_WIDTH/2 + 1),
-    .max = 12 * 60 * 60,
+    .max = SECS_PER_BAR,
     .w = PIXELS_PER_BAR,
     .thickness = 2,
     .extend = false,
@@ -612,7 +620,6 @@ static void main_window_unload(Window *window) {
     destroy_resources();
     // accel_tap_service_unsubscribe();
     // connection_service_unsubscribe();
-    tick_timer_service_unsubscribe();
 
 #if CONFIGURABLE
     config_deinit();
