@@ -31,7 +31,7 @@ void mark_root_window_dirty(bool full_redraw);
  This watchface implementation; handlers
 ******************************************************************************/
 
-#define BAT_ENABLED (1)
+#define BAT_ENABLED (0)
 
 static GFont s_bar_label_font;
 static GFont s_bar_title_font;

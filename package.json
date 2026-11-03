@@ -1,7 +1,7 @@
 {
   "name": "BatSave",
   "author": "howeaj",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "keywords": ["pebble-app"],
   "private": true,
   "pebble": {
@@ -45,8 +45,7 @@
             "gabbro"
           ]
         },
-        {"type": "bitmap", "file": "twelve.png", "name": "TWELVE"},
-        {"type": "bitmap", "file": "bat.png", "name": "BAT"}
+        {"type": "bitmap", "file": "twelve.png", "name": "TWELVE"}
       ]
     }
   }
